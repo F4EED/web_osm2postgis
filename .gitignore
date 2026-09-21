@@ -1,0 +1,19 @@
+# Secrets locaux
+.env
+
+# Téléchargements OSM temporaires
+data/cache/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Journaux et système
+*.log
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/

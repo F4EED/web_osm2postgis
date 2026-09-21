@@ -1,0 +1,24 @@
+services:
+  postgis:
+    image: postgis/postgis:16-3.5
+    container_name: osm2postgis-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: osm
+      POSTGRES_PASSWORD: osm
+      POSTGRES_DB: osm
+    ports:
+      # 5433 pour ne pas entrer en conflit avec un PostgreSQL déjà sur 5432.
+      - "5433:5432"
+    volumes:
+      - postgis_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U osm -d osm"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    shm_size: 256mb
+
+volumes:
+  postgis_data:

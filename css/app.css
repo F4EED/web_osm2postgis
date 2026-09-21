@@ -1,0 +1,478 @@
+/* ===========================================================================
+   app.css — feuille de style (dérivée du projet pmtiles, sans Meshtastic).
+   Chargée APRÈS leaflet.css.
+
+   Sommaire :
+     1. Variables et base
+     2. Carte
+     3. Panneau latéral
+     4. Popups et contrôle de couches
+     5. Sélection de zone
+     6. Fenêtre modale d'import
+     7. Étiquettes de villes
+     8. Aperçu OSM importé
+   =========================================================================== */
+
+:root {
+  --water: #b9cfe0;
+  --ink: #1c2833;
+  --muted: #5c6b7a;
+  --panel: rgba(255, 252, 247, 0.94);
+  --country-fill: #f6f1e6;
+  --country-stroke: #4d5d6c;
+  --france-fill: #f3d7a4;
+  --france-stroke: #7a3e14;
+  --hover-fill: #ffe08a;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  font-family: "Segoe UI", system-ui, sans-serif;
+  color: var(--ink);
+  background: var(--water);
+}
+
+#map {
+  width: 100%;
+  height: 100%;
+  background: var(--water);
+}
+
+.leaflet-container {
+  background: var(--water);
+  font-family: inherit;
+}
+
+.panel {
+  position: absolute;
+  z-index: 1000;
+  top: 12px;
+  left: 56px;
+  max-width: min(340px, calc(100vw - 80px));
+  padding: 12px 14px 10px;
+  border-radius: 10px;
+  background: var(--panel);
+  box-shadow: 0 8px 24px rgba(28, 40, 51, 0.18);
+  backdrop-filter: blur(8px);
+}
+
+@media (max-width: 720px) {
+  .panel {
+    left: 52px;
+    right: 12px;
+    max-width: none;
+  }
+}
+
+.panel h1 {
+  margin: 0 0 4px;
+  font-size: 1.05rem;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+}
+
+.panel p {
+  margin: 0 0 10px;
+  font-size: 0.82rem;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.legend {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 8px 0 0;
+  border-top: 1px solid rgba(92, 107, 122, 0.22);
+  list-style: none;
+  font-size: 0.8rem;
+}
+
+.legend li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.swatch {
+  width: 22px;
+  height: 14px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.swatch.country {
+  background: var(--country-fill);
+  border: 1.5px solid var(--country-stroke);
+}
+
+.swatch.france {
+  background: var(--france-fill);
+  border: 1.5px solid var(--france-stroke);
+}
+
+.swatch.city {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #1c2833;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px rgba(28, 40, 51, 0.35);
+}
+
+#hover-box {
+  min-height: 1.2em;
+  margin-top: 8px;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+#hover-box .hint {
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.db-status {
+  margin: 8px 0 0;
+  padding-top: 8px;
+  border-top: 1px solid rgba(92, 107, 122, 0.22);
+  font-size: 0.75rem;
+  min-height: 1.1em;
+}
+
+.db-status.is-ok {
+  color: #166534;
+}
+
+.db-status.is-error {
+  color: #b42318;
+}
+
+.db-status.is-busy {
+  color: #1d4ed8;
+}
+
+.panel .check.osm-toggle {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.basemap-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 10px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.basemap-field select {
+  font: inherit;
+  font-weight: 400;
+  padding: 5px 8px;
+  border: 1px solid #c5ced6;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.leaflet-popup-content {
+  margin: 10px 12px;
+  font-size: 0.9rem;
+}
+
+.leaflet-popup-content strong {
+  display: block;
+  font-size: 1rem;
+  margin-bottom: 2px;
+}
+
+.leaflet-popup-content .meta {
+  display: block;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.leaflet-control-layers {
+  min-width: 170px;
+}
+
+.leaflet-control-layers-expanded {
+  padding: 8px 10px 8px 8px;
+}
+
+.leaflet-control-layers label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 2px 0;
+  white-space: nowrap;
+}
+
+.leaflet-container.is-selecting {
+  cursor: crosshair;
+}
+
+.zone-tools {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(92, 107, 122, 0.22);
+}
+
+.zone-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.zone-tools button,
+dialog button {
+  font: inherit;
+  font-size: 0.82rem;
+  border: 1px solid #4d5d6c;
+  background: #fff;
+  color: var(--ink);
+  border-radius: 6px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.zone-tools button[aria-pressed="true"],
+dialog button.primary {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+  color: #fff;
+}
+
+.zone-hint {
+  margin: 8px 0 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+  min-height: 1.1em;
+}
+
+.extract-status {
+  margin-top: 8px;
+  font-size: 0.8rem;
+  line-height: 1.35;
+}
+
+.extract-status.is-busy {
+  color: #1d4ed8;
+}
+
+.extract-status.is-ok {
+  color: #166534;
+}
+
+.extract-status.is-error {
+  color: #b42318;
+}
+
+.extract-status .log {
+  display: block;
+  margin-top: 4px;
+  font-weight: 400;
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.extract-status a {
+  color: inherit;
+  font-weight: 650;
+}
+
+.zone-marker {
+  background: none;
+  border: none;
+}
+
+.zone-marker span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #1d4ed8;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+dialog#extract-dialog {
+  border: none;
+  border-radius: 12px;
+  padding: 0;
+  width: min(460px, calc(100vw - 32px));
+  box-shadow: 0 16px 40px rgba(28, 40, 51, 0.28);
+}
+
+dialog#extract-dialog::backdrop {
+  background: rgba(28, 40, 51, 0.35);
+}
+
+#extract-form {
+  padding: 16px 18px 14px;
+}
+
+#extract-form h2 {
+  margin: 0 0 6px;
+  font-size: 1.05rem;
+}
+
+.dialog-lead,
+.file-hint,
+.bbox-line {
+  margin: 0 0 10px;
+  font-size: 0.8rem;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.bbox-line {
+  font-family: ui-monospace, monospace;
+  font-size: 0.72rem;
+  word-break: break-all;
+}
+
+#extract-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+#extract-form input[type="text"] {
+  font: inherit;
+  font-weight: 400;
+  padding: 6px 8px;
+  border: 1px solid #c5ced6;
+  border-radius: 6px;
+}
+
+label.check {
+  flex-direction: row !important;
+  align-items: center;
+  font-weight: 400 !important;
+  gap: 8px !important;
+}
+
+.recap-title {
+  margin: 4px 0 6px;
+  font-size: 0.82rem;
+  font-weight: 650;
+  color: var(--ink);
+}
+
+.recap-list {
+  margin: 0 0 12px;
+  padding: 8px 8px 8px 28px;
+  border-radius: 8px;
+  background: #f4f7fa;
+  font-size: 0.78rem;
+  color: var(--ink);
+  line-height: 1.4;
+}
+
+.recap-list li {
+  margin: 0 0 6px;
+}
+
+.recap-list li:last-child {
+  margin-bottom: 0;
+}
+
+.recap-list code {
+  font-size: 0.72rem;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.city-label {
+  background: none !important;
+  border: none !important;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.city-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #1c2833;
+  border: 1.5px solid #fff;
+  box-shadow: 0 0 0 1px rgba(28, 40, 51, 0.25);
+  flex-shrink: 0;
+}
+
+.city-label.is-capital .city-dot {
+  width: 9px;
+  height: 9px;
+  background: #111827;
+}
+
+.city-name {
+  font-size: 11px;
+  font-weight: 650;
+  color: #1c2833;
+  text-shadow:
+    0 0 3px #fff,
+    1px 0 1px #fff,
+    -1px 0 1px #fff,
+    0 1px 1px #fff,
+    0 -1px 1px #fff;
+}
+
+.city-label.is-capital .city-name {
+  font-size: 12px;
+}
+
+.city-label.is-secondary .city-dot {
+  width: 6px;
+  height: 6px;
+  background: #4d5d6c;
+}
+
+.city-label.is-secondary .city-name {
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.osm-preview-point {
+  background: none !important;
+  border: none !important;
+}
+
+.osm-preview-point span {
+  display: block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #b42318;
+  border: 1.5px solid #fff;
+  box-shadow: 0 0 0 1px rgba(28, 40, 51, 0.3);
+}

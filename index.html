@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<!--
+  OSM2Postgis — page unique.
+
+  Même carte et même sélection de zone que le projet pmtiles, mais l'action
+  finale importe OpenStreetMap dans un schéma PostGIS au lieu d'écrire une
+  archive .pmtiles.
+
+  Identifiants = contrat avec le JavaScript (voir js/*.js).
+-->
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>OSM → PostGIS</title>
+    <link rel="stylesheet" href="css/leaflet.css" />
+    <link rel="stylesheet" href="css/app.css" />
+  </head>
+  <body>
+    <div id="map"></div>
+
+    <aside class="panel">
+      <h1>OSM → PostGIS</h1>
+      <p>
+        Même fond de carte que pmtiles : cliquez quatre points, les données
+        OpenStreetMap de la zone partent dans PostGIS.
+      </p>
+
+      <ul class="legend">
+        <li><span class="swatch country"></span> Pays</li>
+        <li><span class="swatch france"></span> Départements français</li>
+        <li><span class="swatch city"></span> Villes (2 par département au zoom)</li>
+      </ul>
+
+      <div id="hover-box"></div>
+
+      <p id="db-status" class="db-status">PostGIS : vérification…</p>
+
+      <label class="check osm-toggle">
+        <input id="osm-tiles" type="checkbox" />
+        Fond OpenStreetMap (en ligne)
+      </label>
+
+      <label class="basemap-field">
+        Schémas importés
+        <select id="import-select">
+          <option value="">Aucun aperçu</option>
+        </select>
+      </label>
+
+      <div class="zone-tools">
+        <div class="zone-actions">
+          <button type="button" id="zone-btn" aria-pressed="false">
+            Sélectionner une zone
+          </button>
+          <button type="button" id="zone-cancel" hidden>Annuler</button>
+        </div>
+        <p id="zone-hint" class="zone-hint"></p>
+        <div id="extract-status" class="extract-status"></div>
+      </div>
+    </aside>
+
+    <dialog id="extract-dialog">
+      <form id="extract-form" method="dialog">
+        <h2>Confirmer l’import PostGIS</h2>
+        <p class="dialog-lead">
+          Récapitulatif des opérations qui seront exécutées. <strong>Oui</strong>
+          lance l’import, <strong>Non</strong> ferme cette fenêtre et annule la
+          sélection.
+        </p>
+        <label>
+          Nom de la zone
+          <input
+            id="extract-name"
+            name="name"
+            type="text"
+            required
+            maxlength="48"
+            placeholder="ex. loire"
+            autocomplete="off"
+          />
+        </label>
+        <p class="file-hint">
+          Schéma PostgreSQL : <code id="schema-preview">osm_zone</code>
+        </p>
+        <p id="extract-bbox" class="bbox-line"></p>
+        <label class="check">
+          <input name="overwrite" type="checkbox" />
+          Remplacer le schéma s’il existe déjà
+        </label>
+        <p class="recap-title">Opérations prévues dans PostGIS</p>
+        <ol id="pg-recap" class="recap-list"></ol>
+        <div class="dialog-actions">
+          <button type="button" id="extract-dialog-cancel">Non</button>
+          <button type="submit" class="primary">Oui</button>
+        </div>
+      </form>
+    </dialog>
+
+    <script src="js/leaflet.js"></script>
+    <script src="js/pays-fr.js"></script>
+    <script src="js/map.js"></script>
+    <script src="js/basemap.js"></script>
+    <script src="js/zone-import.js"></script>
+  </body>
+</html>

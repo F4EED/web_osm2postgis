@@ -1,0 +1,16 @@
+[Unit]
+Description=OSM2Postgis — carte Europe et import OSM vers PostGIS
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/gmc-poste-2/Apps/OSM2Postgis
+EnvironmentFile=-/home/gmc-poste-2/Apps/OSM2Postgis/.env
+ExecStartPre=/usr/bin/docker compose -f /home/gmc-poste-2/Apps/OSM2Postgis/docker-compose.yml up -d
+ExecStart=/usr/bin/python3 /home/gmc-poste-2/Apps/OSM2Postgis/serve.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target
