@@ -22,8 +22,8 @@
     <aside class="panel">
       <h1>OSM → PostGIS</h1>
       <p>
-        Même fond de carte que pmtiles : cliquez quatre points, les données
-        OpenStreetMap de la zone partent dans PostGIS.
+        Cliquez autour de la zone (3 points ou plus), puis validez : les
+        données OpenStreetMap de ce polygone partent dans PostGIS.
       </p>
 
       <ul class="legend">
@@ -36,9 +36,13 @@
 
       <p id="db-status" class="db-status">PostGIS : vérification…</p>
 
-      <label class="check osm-toggle">
-        <input id="osm-tiles" type="checkbox" />
-        Fond OpenStreetMap (en ligne)
+      <label class="basemap-field">
+        Fond de carte
+        <select id="basemap-select">
+          <option value="">Europe locale</option>
+          <option value="osm">OpenStreetMap</option>
+          <option value="opentopo" selected>OpenTopoMap</option>
+        </select>
       </label>
 
       <label class="basemap-field">
@@ -53,6 +57,7 @@
           <button type="button" id="zone-btn" aria-pressed="false">
             Sélectionner une zone
           </button>
+          <button type="button" id="zone-done" hidden>Terminer</button>
           <button type="button" id="zone-cancel" hidden>Annuler</button>
         </div>
         <p id="zone-hint" class="zone-hint"></p>
@@ -88,6 +93,21 @@
           <input name="overwrite" type="checkbox" />
           Remplacer le schéma s’il existe déjà
         </label>
+        <label class="check">
+          <input name="contours" type="checkbox" checked />
+          Courbes de niveau (MNT SRTM, table contours)
+        </label>
+        <label class="check">
+          <input name="maritime" type="checkbox" checked />
+          Données maritimes SHOM (côte, épaves, feux, câbles…)
+        </label>
+        <label class="check">
+          <input name="risques" type="checkbox" checked />
+          Risques et crises (Géorisques : PPR, cavités, sismicité, CATNAT…)
+        </label>
+        <p class="file-hint">
+          Mémoire des crises et zonages à titre informatif — ne remplacent pas un PPR ou un atlas officiel.
+        </p>
         <p class="recap-title">Opérations prévues dans PostGIS</p>
         <ol id="pg-recap" class="recap-list"></ol>
         <div class="dialog-actions">

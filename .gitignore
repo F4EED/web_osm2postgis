@@ -1,5 +1,6 @@
 # Secrets locaux
 .env
+pwd.md
 
 # Téléchargements OSM temporaires
 data/cache/

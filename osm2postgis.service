@@ -7,7 +7,6 @@ Wants=network-online.target
 Type=simple
 WorkingDirectory=/home/gmc-poste-2/Apps/OSM2Postgis
 EnvironmentFile=-/home/gmc-poste-2/Apps/OSM2Postgis/.env
-ExecStartPre=/usr/bin/docker compose -f /home/gmc-poste-2/Apps/OSM2Postgis/docker-compose.yml up -d
 ExecStart=/usr/bin/python3 /home/gmc-poste-2/Apps/OSM2Postgis/serve.py
 Restart=always
 RestartSec=5

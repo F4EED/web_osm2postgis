@@ -44,6 +44,11 @@ body {
   background: var(--water);
 }
 
+#map.is-otm-preview,
+.leaflet-container.is-otm-preview {
+  background: #f1ead8;
+}
+
 .leaflet-container {
   background: var(--water);
   font-family: inherit;
@@ -475,4 +480,69 @@ label.check {
   background: #b42318;
   border: 1.5px solid #fff;
   box-shadow: 0 0 0 1px rgba(28, 40, 51, 0.3);
+}
+
+.osm-preview-point.is-catnat span {
+  background: #b45309;
+}
+
+.osm-preview-point.is-cavite span {
+  background: #57534e;
+}
+
+.osm-preview-point.is-mvt span {
+  background: #9a3412;
+}
+
+.osm-preview-point.is-dicrim span {
+  background: #b45309;
+  border-radius: 2px;
+}
+
+.osm-preview-point.is-bdhi span {
+  background: #1d4ed8;
+  border-radius: 2px;
+}
+
+.osm-preview-point.is-officiel span {
+  width: 10px;
+  height: 10px;
+}
+
+.osm-preview-point.is-hopital span { background: #dc2626; }
+.osm-preview-point.is-clinique span { background: #f472b6; }
+.osm-preview-point.is-pompier span { background: #ea580c; }
+.osm-preview-point.is-police span { background: #1e3a8a; }
+.osm-preview-point.is-gendarmerie span { background: #1d4ed8; }
+.osm-preview-point.is-mairie span { background: #7c3aed; }
+.osm-preview-point.is-prefecture span { background: #6d28d9; }
+.osm-preview-point.is-administration span { background: #0f766e; }
+.osm-preview-point.is-justice span { background: #78716c; }
+.osm-preview-point.is-poste span { background: #eab308; }
+.osm-preview-point.is-militaire span { background: #3f6212; }
+.osm-preview-point.is-diplomatique span { background: #0e7490; }
+.osm-preview-point.is-public span { background: #64748b; }
+
+.osm-preview-point.is-shom span {
+  background: #0e7490;
+}
+
+.otm-contour-label {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  color: #a86b3c;
+  font-size: 10px;
+  font-weight: 650;
+  padding: 0 2px;
+  text-shadow:
+    0 0 3px #f1ead8,
+    1px 0 1px #f1ead8,
+    -1px 0 1px #f1ead8,
+    0 1px 1px #f1ead8,
+    0 -1px 1px #f1ead8;
+}
+
+.leaflet-tooltip.otm-contour-label::before {
+  display: none;
 }

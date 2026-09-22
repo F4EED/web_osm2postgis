@@ -1,14 +1,18 @@
+# PostGIS optionnel, uniquement si vous n'utilisez pas le PostgreSQL
+# local déjà présent sur le port 5432 (utilisateur/base gmc).
+# L'application cible 5432 par défaut ; ne démarrez pas ce compose
+# en même temps, il occuperait un second PostGIS sur 5433.
 services:
   postgis:
     image: postgis/postgis:16-3.5
     container_name: osm2postgis-db
     restart: unless-stopped
+    profiles: ["sidecar"]
     environment:
       POSTGRES_USER: osm
       POSTGRES_PASSWORD: osm
       POSTGRES_DB: osm
     ports:
-      # 5433 pour ne pas entrer en conflit avec un PostgreSQL déjà sur 5432.
       - "5433:5432"
     volumes:
       - postgis_data:/var/lib/postgresql/data

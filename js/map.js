@@ -286,7 +286,7 @@
    * Attache popup et interactions à un polygone de pays.
    *
    * Le test `window.zoneSelectActive` apparaît dans chaque gestionnaire : quand
-   * l'utilisateur est en train de placer les 4 points d'une zone, les clics
+   * l'utilisateur est en train de placer les sommets d'une zone, les clics
    * doivent servir à poser un sommet, pas à ouvrir une popup, et le survol ne
    * doit pas repeindre la carte.
    */
@@ -298,6 +298,7 @@
     layer.on({
       click(e) {
         if (window.zoneSelectActive) {
+          L.DomEvent.stop(e);
           layer.closePopup();
           if (window.addZonePoint) window.addZonePoint(e.latlng);
         }
@@ -324,6 +325,7 @@
     layer.on({
       click(e) {
         if (window.zoneSelectActive) {
+          L.DomEvent.stop(e);
           layer.closePopup();
           if (window.addZonePoint) window.addZonePoint(e.latlng);
         }

@@ -1,20 +1,23 @@
 /**
- * zone-import.js — sélection d'une zone à 4 points et import OSM → PostGIS.
+ * zone-import.js — sélection d'un polygone (3 sommets ou plus) et import OSM → PostGIS.
  *
- * Même parcours que js/zone-extract.js de pmtiles :
+ * Parcours :
  *   1. « Sélectionner une zone » ;
- *   2. 4 clics ;
- *   3. dialogue (nom, écrasement) ;
- *   4. POST /api/import → sondage /api/jobs/<id> ;
- *   5. à la fin : aperçu vectoriel du schéma importé.
+ *   2. clics successifs autour de l'emprise (ordre = contour) ;
+ *   3. Terminer / double-clic / Entrée (à partir de 3 points) ;
+ *   4. dialogue (nom, écrasement) ;
+ *   5. POST /api/import → sondage /api/jobs/<id> ;
+ *   6. à la fin : aperçu vectoriel du schéma importé.
  *
  * Dépendances : window.map (map.js), window.loadOsmPreview, window.refreshImportList.
  * Exporte : window.addZonePoint(latlng), window.zoneSelectActive.
  */
 (() => {
-  const MAX_POINTS = 4;
+  const MIN_POINTS = 3;
+  const MAX_POINTS = 64;
 
   const btn = document.getElementById("zone-btn");
+  const doneBtn = document.getElementById("zone-done");
   const cancelBtn = document.getElementById("zone-cancel");
   const hintEl = document.getElementById("zone-hint");
   const statusEl = document.getElementById("extract-status");
@@ -55,8 +58,10 @@
     selecting = false;
     window.zoneSelectActive = false;
     map.getContainer().classList.remove("is-selecting");
+    map.doubleClickZoom.enable();
     btn.setAttribute("aria-pressed", "false");
     btn.textContent = "Sélectionner une zone";
+    if (doneBtn) doneBtn.hidden = true;
     cancelBtn.hidden = true;
   }
 
@@ -67,12 +72,15 @@
     window.zoneSelectActive = true;
     map.closePopup();
     map.getContainer().classList.add("is-selecting");
+    map.doubleClickZoom.disable();
     btn.setAttribute("aria-pressed", "true");
     btn.textContent = "Sélection en cours…";
     cancelBtn.hidden = false;
+    if (doneBtn) doneBtn.hidden = true;
     setStatus("");
     setHint(
-      `Dézoomez si besoin, puis cliquez ${MAX_POINTS} points (0/${MAX_POINTS}).`
+      `Cliquez autour de la zone, dans l’ordre (au moins ${MIN_POINTS} points). ` +
+        "Double-clic ou « Terminer » pour valider."
     );
   }
 
@@ -82,14 +90,8 @@
     setHint("");
   }
 
-  function orderedRing(latlngs) {
-    const lat0 = latlngs.reduce((s, p) => s + p.lat, 0) / latlngs.length;
-    const lon0 = latlngs.reduce((s, p) => s + p.lng, 0) / latlngs.length;
-    return [...latlngs].sort(
-      (a, b) =>
-        Math.atan2(a.lat - lat0, a.lng - lon0) -
-        Math.atan2(b.lat - lat0, b.lng - lon0)
-    );
+  function closeTo(a, b, px = 14) {
+    return map.latLngToLayerPoint(a).distanceTo(map.latLngToLayerPoint(b)) < px;
   }
 
   function render() {
@@ -103,25 +105,53 @@
       });
       L.marker(ll, { icon, keyboard: false }).addTo(drawn);
     });
+    if (points.length === 2) {
+      L.polyline(points, {
+        pane: "zonePane",
+        color: "#1d4ed8",
+        weight: 2,
+      }).addTo(drawn);
+      return;
+    }
     if (points.length < 2) return;
-    const ring = orderedRing(points);
-    L.polygon(ring, {
+    L.polygon(points, {
       pane: "zonePane",
       color: "#1d4ed8",
       weight: 2,
       fillColor: "#3b82f6",
       fillOpacity: 0.18,
     }).addTo(drawn);
-    if (points.length === MAX_POINTS) {
-      const b = L.latLngBounds(points);
-      L.rectangle(b, {
-        pane: "zonePane",
-        color: "#1e3a5f",
-        weight: 1,
-        dashArray: "5 4",
-        fill: false,
-      }).addTo(drawn);
+  }
+
+  function updateHints() {
+    if (doneBtn) doneBtn.hidden = !selecting || points.length < MIN_POINTS;
+    if (!selecting) return;
+    if (points.length < MIN_POINTS) {
+      const left = MIN_POINTS - points.length;
+      setHint(
+        `${points.length} point${points.length > 1 ? "s" : ""}. ` +
+          `Encore ${left} pour former un polygone, puis « Terminer ».`
+      );
+      return;
     }
+    if (points.length >= MAX_POINTS) {
+      setHint(`Maximum ${MAX_POINTS} sommets atteint. Validez la zone.`);
+      return;
+    }
+    setHint(
+      `${points.length} sommets. Continuez, ou « Terminer » / double-clic pour valider.`
+    );
+  }
+
+  function finishZone() {
+    if (!selecting) return;
+    if (points.length < MIN_POINTS) {
+      setHint(`Il faut au moins ${MIN_POINTS} points pour délimiter la zone.`);
+      return;
+    }
+    setHint("Zone définie. Vérifiez le récapitulatif PostGIS.");
+    stopSelecting();
+    openDialog();
   }
 
   function fmt(n) {
@@ -148,7 +178,7 @@
       .replace(/"/g, "&quot;");
   }
 
-  let pgInfo = { host: "127.0.0.1", port: 5433, database: "osm", user: "osm" };
+  let pgInfo = { host: "127.0.0.1", port: 5432, database: "gmc", user: "gmc" };
   let acceptImport = false;
 
   function fillRecap() {
@@ -162,11 +192,23 @@
       : `Créer le schéma <code>${escapeHtml(schema)}</code> (refusé s’il existe déjà).`;
     recapEl.innerHTML = [
       `Connexion à PostGIS <code>${escapeHtml(conn)}</code>, base <code>${escapeHtml(pgInfo.database)}</code>, utilisateur <code>${escapeHtml(pgInfo.user)}</code>.`,
-      `Télécharger les objets OpenStreetMap du rectangle <code>${fmt(b.getWest())}, ${fmt(b.getSouth())} → ${fmt(b.getEast())}, ${fmt(b.getNorth())}</code>.`,
+      `Télécharger les objets OpenStreetMap du polygone (${points.length} sommets), emprise <code>${fmt(b.getWest())}, ${fmt(b.getSouth())} → ${fmt(b.getEast())}, ${fmt(b.getNorth())}</code>.`,
       schemaStep,
       `Y créer les tables <code>points</code>, <code>lines</code>, <code>multilinestrings</code>, <code>multipolygons</code>, <code>other_relations</code> (colonne <code>geom</code>, index spatial GIST).`,
+      form.contours && form.contours.checked
+        ? `Calculer les <strong>courbes de niveau</strong> (SRTM / OpenTopoMap) dans <code>${escapeHtml(schema)}.contours</code> (attribut <code>elev</code>).`
+        : `Ne pas importer les courbes de niveau.`,
+      form.maritime && form.maritime.checked
+        ? `Télécharger les <strong>données maritimes SHOM</strong> (limite terre-mer IGN-SHOM, épaves, feux, bouées, câbles, 3 milles, natures de fond) dans des tables <code>shom_*</code>. Pas pour la navigation.`
+        : `Ne pas importer les données SHOM.`,
+      form.risques && form.risques.checked
+        ? `Télécharger <strong>risques et mémoire des crises</strong> (Géorisques : cavités, mouvements de terrain, PPR inondation/submersion, argiles, TRI, zonage sismique, intensités SIS ; arrêtés CATNAT ; DICRIM ; fiches de synthèse BDHI) dans des tables <code>risk_*</code>. Informel, pas un PPR officiel.`
+        : `Ne pas importer les zonages de risque, les CATNAT ni les DICRIM.`,
+      `Générer les carroyages <strong>DFCI</strong> (<code>grid_dfci</code>, style QGIS) et <strong>UTM</strong> (<code>grid_utm</code>).`,
+      `Extraire les <strong>bâtiments officiels</strong> OSM (hôpitaux, cliniques, pompiers, police, gendarmerie, mairie, préfecture, etc.) dans <code>officiels</code>, stylés par appartenance.`,
       `Indexer <code>highway</code>, <code>building</code>, <code>landuse</code>, <code>amenity</code> et <code>place</code>.`,
       `Enregistrer l’emprise et les effectifs dans <code>osm2postgis.imports</code>.`,
+      `Enregistrer le style QGIS (OpenTopoMap) dans <code>public.layer_styles</code> : il s’applique à l’ajout des couches.`,
     ]
       .map((item) => `<li>${item}</li>`)
       .join("");
@@ -183,7 +225,7 @@
   async function openDialog() {
     const b = L.latLngBounds(points);
     bboxEl.textContent =
-      `${fmt(b.getWest())}, ${fmt(b.getSouth())} → ${fmt(b.getEast())}, ${fmt(b.getNorth())}` +
+      `${points.length} sommets · ${fmt(b.getWest())}, ${fmt(b.getSouth())} → ${fmt(b.getEast())}, ${fmt(b.getNorth())}` +
       `  (${fmt(b.getEast() - b.getWest())}° × ${fmt(b.getNorth() - b.getSouth())}°)`;
     if (!nameInput.value) nameInput.value = "zone";
     if (schemaPreview) schemaPreview.textContent = "osm_" + schemaFromInput();
@@ -212,19 +254,26 @@
 
   function addPoint(latlng) {
     if (!selecting) return;
-    if (points.length >= MAX_POINTS) return;
     const now = Date.now();
     if (now - lastAddAt < 80) return;
+    if (points.length >= MIN_POINTS && closeTo(points[0], latlng)) {
+      lastAddAt = now;
+      finishZone();
+      return;
+    }
+    if (points.length >= MAX_POINTS) {
+      setHint(`Maximum ${MAX_POINTS} sommets. Cliquez « Terminer » pour valider.`);
+      return;
+    }
     lastAddAt = now;
     points.push(latlng);
     render();
-    if (points.length < MAX_POINTS) {
-      setHint(`Cliquez ${MAX_POINTS} points sur la carte (${points.length}/${MAX_POINTS}).`);
+    if (points.length >= MAX_POINTS) {
+      updateHints();
+      finishZone();
       return;
     }
-    setHint("Zone définie. Vérifiez le récapitulatif PostGIS.");
-    stopSelecting();
-    openDialog();
+    updateHints();
   }
 
   window.addZonePoint = addPoint;
@@ -237,6 +286,7 @@
     startSelecting();
   });
   cancelBtn.addEventListener("click", cancelSelecting);
+  if (doneBtn) doneBtn.addEventListener("click", finishZone);
   dialogCancel.addEventListener("click", cancelFromDialog);
   dialog.addEventListener("cancel", (ev) => {
     ev.preventDefault();
@@ -255,13 +305,37 @@
     fillRecap();
   });
   form.overwrite.addEventListener("change", fillRecap);
+  if (form.contours) form.contours.addEventListener("change", fillRecap);
+  if (form.maritime) form.maritime.addEventListener("change", fillRecap);
+  if (form.risques) form.risques.addEventListener("change", fillRecap);
 
   map.on("click", (e) => addPoint(e.latlng));
+  map.on("dblclick", (e) => {
+    if (!selecting) return;
+    L.DomEvent.stop(e);
+    finishZone();
+  });
   map.on("popupopen", () => {
     if (window.zoneSelectActive) map.closePopup();
   });
   document.addEventListener("keydown", (ev) => {
-    if (ev.key === "Escape" && selecting) cancelSelecting();
+    if (!selecting) return;
+    if (ev.key === "Escape") {
+      cancelSelecting();
+      return;
+    }
+    if (ev.key === "Enter") {
+      ev.preventDefault();
+      finishZone();
+      return;
+    }
+    if (ev.key === "Backspace") {
+      ev.preventDefault();
+      if (!points.length) return;
+      points.pop();
+      render();
+      updateHints();
+    }
   });
 
   form.addEventListener("submit", async (ev) => {
@@ -275,6 +349,9 @@
       name,
       points: points.map((p) => [p.lat, p.lng]),
       overwrite: form.overwrite.checked,
+      contours: Boolean(form.contours && form.contours.checked),
+      maritime: Boolean(form.maritime && form.maritime.checked),
+      risques: Boolean(form.risques && form.risques.checked),
     };
     acceptImport = true;
     dialog.close();
